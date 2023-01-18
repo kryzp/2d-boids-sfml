@@ -8,16 +8,17 @@
 class Boid
 {
 public:
-	static constexpr float SPEED = 1.f;
-	static constexpr float TURN_SPEED = 0.0002f;
-	static constexpr float DET_DST = 25.f;
-	static constexpr float DET_ANG = PI * 0.75f;
+	static constexpr float SPEED = 2.f;
+	static constexpr float TURN_SPEED = 0.002f;
+	static constexpr float EDGE_TURN_SPEED = 0.01f;
+	static constexpr float DET_RAD = 25.f;
+	static constexpr float DET_ANG = PI * 0.7f;
 	static constexpr float ALIGN_FACTOR = 0.0075f;
 
 	Boid()
 		: position(0.f, 0.f)
 		, direction(0.f, 0.f)
-		, colour(sf::Color::Green)
+		, colour(sf::Color::White)
 	{
 	}
 
@@ -34,10 +35,10 @@ public:
 			}
 			auto& other = boids[i];
 			sf::Vector2f to = other.position - position;
-			if (len(to) < DET_DST) {
+			if (len(to) < DET_RAD) {
 				float theta = ang(direction, to);
 				if (std::abs(theta) < DET_ANG) {
-					turn_towards(other.position, -1.f);
+					turn_towards(other.position, -1.8f);
 					align_with(other);
 					com += other.position;
 					detected++;
@@ -52,8 +53,28 @@ public:
 		}
 
 		position += SPEED * direction;
-		position.x = wrap(position.x, 0.f, WINDOW_WIDTH);
-		position.y = wrap(position.y, 0.f, WINDOW_HEIGHT);
+
+		if (position.x - DET_RAD < 0.f) {
+			float theta = ang(direction, { -1.f, 0.f });
+			turn_by(-theta * EDGE_TURN_SPEED);
+		}
+
+		if (position.y - DET_RAD < 0.f) {
+			float theta = ang(direction, { 0.f, -1.f });
+			turn_by(-theta * EDGE_TURN_SPEED);
+		}
+
+		if (position.x + DET_RAD > WINDOW_HEIGHT) {
+			float theta = ang(direction, { 1.f, 0.f });
+			turn_by(-theta * EDGE_TURN_SPEED);
+		}
+
+		if (position.y + DET_RAD > WINDOW_HEIGHT) {
+			float theta = ang(direction, { 0.f, 1.f });
+			turn_by(-theta * EDGE_TURN_SPEED);
+		}
+
+		colour = from_hsv(std::atan2f(direction.y, direction.x)*180.f/PI + 180, 1.f, 1.f);
 	}
 
 	void draw(sf::RenderWindow& window) const
@@ -74,23 +95,65 @@ public:
 	}
 
 private:
-	void turn_towards(const sf::Vector2f& point, float dir)
-	{
-		float theta = ang(direction, point - position);
-		direction = norm(rot(direction, dir * theta * TURN_SPEED));
-	}
-
-	void align_with(const Boid& other)
-	{
-		float theta = ang(direction, other.direction);
-		direction = norm(rot(direction, theta * ALIGN_FACTOR));
-	}
-
-	float wrap(float v, float mn, float mx) { return (v > mx) ? mn+10.0f : (v < mn) ? mx-10.0f : v; }
+	void turn_towards(const sf::Vector2f& point, float dir) { turn_by(ang(direction, point - position) * dir * TURN_SPEED); }
+	void align_with(const Boid& other) { turn_by(ang(direction, other.direction) * ALIGN_FACTOR); }
+	void turn_by(float theta) { direction = norm(rot(direction, theta)); }
 	float len(const sf::Vector2f& v) { return std::sqrtf(v.x*v.x + v.y*v.y); }
 	float ang(const sf::Vector2f& v, const sf::Vector2f& w) { return std::atan2(v.x*w.y - v.y*w.x, v.x*w.x + v.y*w.y); }
 	sf::Vector2f norm(const sf::Vector2f& v) { return v / len(v); }
 	sf::Vector2f rot(const sf::Vector2f& v, float theta) { return { v.x*std::cosf(theta) - v.y*std::sinf(theta), v.x*std::sin(theta) + v.y*std::cosf(theta) }; }
+
+	sf::Color from_hsv(float hue, float sat, float val)
+	{
+		float C = sat * val;
+		float X = C * (1 - std::abs(std::fmodf(hue / 60.0f, 2.f) - 1));
+
+		float r, g, b;
+		r = g = b = 0.0f;
+
+		if (0 <= hue && hue < 60)
+		{
+			r = C;
+			g = X;
+			b = 0.0f;
+		}
+		else if (60 <= hue && hue < 120)
+		{
+			r = X;
+			g = C;
+			b = 0.0f;
+		}
+		else if (120 <= hue && hue < 180)
+		{
+			r = 0.0f;
+			g = C;
+			b = X;
+		}
+		else if (180 <= hue && hue < 240)
+		{
+			r = 0.0f;
+			g = X;
+			b = C;
+		}
+		else if (240 <= hue && hue < 300)
+		{
+			r = X;
+			g = 0.0f;
+			b = C;
+		}
+		else if (300 <= hue && hue < 360)
+		{
+			r = C;
+			g = 0.0f;
+			b = X;
+		}
+
+		return sf::Color(
+			static_cast<char>(r * 255.0f),
+			static_cast<char>(g * 255.0f),
+			static_cast<char>(b * 255.0f)
+		);
+	}
 
 public:
 	sf::Vector2f position;

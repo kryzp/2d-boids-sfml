@@ -29,10 +29,10 @@ int main()
 			boids[i].update(i, boids);
 		}
 
-		window.clear();
+		window.clear(sf::Color(11, 13, 15));
 
-		for (auto& b : boids) {
-			b.draw(window);
+		for (int i = 0; i < BOID_COUNT; i++) {
+			boids[i].draw(window);
 		}
 
 		window.display();
