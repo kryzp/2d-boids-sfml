@@ -8,12 +8,12 @@
 class Boid
 {
 public:
-	static constexpr float SPEED = 2.f;
-	static constexpr float TURN_SPEED = 0.002f;
+	static constexpr float SPEED = 3.f;
+	static constexpr float TURN_SPEED = 0.005f;
 	static constexpr float EDGE_TURN_SPEED = 0.01f;
-	static constexpr float DET_RAD = 25.f;
-	static constexpr float DET_ANG = PI * 0.7f;
-	static constexpr float ALIGN_FACTOR = 0.0075f;
+	static constexpr float DET_RAD = 50.f;
+	static constexpr float DET_ANG = PI * 0.75f;
+	static constexpr float ALIGN_FACTOR = 0.0275f;
 
 	Boid()
 		: position(0.f, 0.f)
@@ -38,7 +38,7 @@ public:
 			if (len(to) < DET_RAD) {
 				float theta = ang(direction, to);
 				if (std::abs(theta) < DET_ANG) {
-					turn_towards(other.position, -1.8f);
+					turn_towards(other.position, -1.f);
 					align_with(other);
 					com += other.position;
 					detected++;
@@ -74,7 +74,7 @@ public:
 			turn_by(-theta * EDGE_TURN_SPEED);
 		}
 
-		colour = from_hsv(std::atan2f(direction.y, direction.x)*180.f/PI + 180, 1.f, 1.f);
+		colour = from_hsv(std::atan2f(direction.y, direction.x)*180.f/PI + 180, .4f, 1.f);
 	}
 
 	void draw(sf::RenderWindow& window) const
@@ -87,12 +87,16 @@ public:
 		shape.setPoint(2, sf::Vector2f( 0.5f,  0.65f));
 
 		shape.setFillColor(colour);
-		shape.setScale(5.f, 5.f);
+		shape.setScale(7.f, 7.f);
 		shape.setRotation(angle);
 		shape.setPosition(position);
 
 		window.draw(shape);
 	}
+
+	sf::Vector2f position;
+	sf::Vector2f direction;
+	sf::Color colour;
 
 private:
 	void turn_towards(const sf::Vector2f& point, float dir) { turn_by(ang(direction, point - position) * dir * TURN_SPEED); }
@@ -107,6 +111,7 @@ private:
 	{
 		float C = sat * val;
 		float X = C * (1 - std::abs(std::fmodf(hue / 60.0f, 2.f) - 1));
+		float m = val - C;
 
 		float r, g, b;
 		r = g = b = 0.0f;
@@ -149,14 +154,9 @@ private:
 		}
 
 		return sf::Color(
-			static_cast<char>(r * 255.0f),
-			static_cast<char>(g * 255.0f),
-			static_cast<char>(b * 255.0f)
+			static_cast<char>((r + m) * 255.0f),
+			static_cast<char>((g + m) * 255.0f),
+			static_cast<char>((b + m) * 255.0f)
 		);
 	}
-
-public:
-	sf::Vector2f position;
-	sf::Vector2f direction;
-	sf::Color colour;
 };
