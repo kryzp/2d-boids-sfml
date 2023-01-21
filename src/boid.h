@@ -9,11 +9,11 @@ class Boid
 {
 public:
 	static constexpr float SPEED = 3.f;
-	static constexpr float TURN_SPEED = 0.005f;
-	static constexpr float EDGE_TURN_SPEED = 0.01f;
+	static constexpr float TURN_SPEED = 0.01f;
+	static constexpr float EDGE_TURN_SPEED = 0.05f;
 	static constexpr float DET_RAD = 50.f;
 	static constexpr float DET_ANG = PI * 0.75f;
-	static constexpr float ALIGN_FACTOR = 0.0275f;
+	static constexpr float ALIGN_FACTOR = 0.0075f;
 
 	Boid()
 		: position(0.f, 0.f)
@@ -54,22 +54,22 @@ public:
 
 		position += SPEED * direction;
 
-		if (position.x - DET_RAD < 0.f) {
+		if (position.x < 0.f) {
 			float theta = ang(direction, { -1.f, 0.f });
 			turn_by(-theta * EDGE_TURN_SPEED);
 		}
 
-		if (position.y - DET_RAD < 0.f) {
+		if (position.y < 0.f) {
 			float theta = ang(direction, { 0.f, -1.f });
 			turn_by(-theta * EDGE_TURN_SPEED);
 		}
 
-		if (position.x + DET_RAD > WINDOW_HEIGHT) {
+		if (position.x > WINDOW_WIDTH) {
 			float theta = ang(direction, { 1.f, 0.f });
 			turn_by(-theta * EDGE_TURN_SPEED);
 		}
 
-		if (position.y + DET_RAD > WINDOW_HEIGHT) {
+		if (position.y > WINDOW_HEIGHT) {
 			float theta = ang(direction, { 0.f, 1.f });
 			turn_by(-theta * EDGE_TURN_SPEED);
 		}
