@@ -2,18 +2,22 @@
 
 #include <SFML/Graphics.hpp>
 #include <cmath>
+#include <vector>
 
 #include "defs.h"
 
 class Boid
 {
 public:
-	static constexpr float SPEED = 3.f;
-	static constexpr float TURN_SPEED = 0.01f;
-	static constexpr float EDGE_TURN_SPEED = 0.05f;
+	// used in context of dt
+	static constexpr float SPEED = 300.f;
+	static constexpr float TURN_SPEED = 0.5f;
+	static constexpr float EDGE_TURN_SPEED = 5.0f;
+	static constexpr float ALIGN_FACTOR = 0.75f;
+
+	// independent of dt
 	static constexpr float DET_RAD = 50.f;
 	static constexpr float DET_ANG = PI * 0.75f;
-	static constexpr float ALIGN_FACTOR = 0.0075f;
 
 	Boid()
 		: position(0.f, 0.f)
@@ -24,12 +28,12 @@ public:
 
 	~Boid() = default;
 
-	void update(int idx, Boid* boids)
+	void update(int idx, const std::vector<Boid>& boids, float dt)
 	{
 		sf::Vector2f com(0.f, 0.f);
 		int detected = 0;
 
-		for (int i = 0; i < BOID_COUNT; i++) {
+		for (int i = 0; i < boids.size(); i++) {
 			if (i == idx) {
 				continue;
 			}
@@ -38,40 +42,42 @@ public:
 			if (len(to) < DET_RAD) {
 				float theta = ang(direction, to);
 				if (std::abs(theta) < DET_ANG) {
-					turn_towards(other.position, -1.f);
-					align_with(other);
+					turn_towards(other.position, -1.f, dt);
+					align_with(other, dt);
 					com += other.position;
 					detected++;
 				}
 			}
 		}
 
+		printf("%d\n", boids.size());
+
 		if ((com.x != 0.f || com.y != 0.f) && detected != 0) {
 			com.x /= static_cast<float>(detected);
 			com.y /= static_cast<float>(detected);
-			turn_towards(com, 1.f);
+			turn_towards(com, 1.f, dt);
 		}
 
-		position += SPEED * direction;
+		position += SPEED * norm(direction) * dt;
 
 		if (position.x < 0.f) {
-			float theta = ang(direction, { -1.f, 0.f });
-			turn_by(-theta * EDGE_TURN_SPEED);
+			float theta = ang(direction, { 1.f, 0.f });
+			turn_by(theta * EDGE_TURN_SPEED * dt);
 		}
 
 		if (position.y < 0.f) {
-			float theta = ang(direction, { 0.f, -1.f });
-			turn_by(-theta * EDGE_TURN_SPEED);
+			float theta = ang(direction, { 0.f, 1.f });
+			turn_by(theta * EDGE_TURN_SPEED * dt);
 		}
 
 		if (position.x > WINDOW_WIDTH) {
-			float theta = ang(direction, { 1.f, 0.f });
-			turn_by(-theta * EDGE_TURN_SPEED);
+			float theta = ang(direction, { -1.f, 0.f });
+			turn_by(theta * EDGE_TURN_SPEED * dt);
 		}
 
 		if (position.y > WINDOW_HEIGHT) {
-			float theta = ang(direction, { 0.f, 1.f });
-			turn_by(-theta * EDGE_TURN_SPEED);
+			float theta = ang(direction, { 0.f, -1.f });
+			turn_by(theta * EDGE_TURN_SPEED * dt);
 		}
 
 		colour = from_hsv(std::atan2f(direction.y, direction.x)*180.f/PI + 180, .4f, 1.f);
@@ -87,7 +93,7 @@ public:
 		shape.setPoint(2, sf::Vector2f( 0.5f,  0.65f));
 
 		shape.setFillColor(colour);
-		shape.setScale(7.f, 7.f);
+		shape.setScale(4.f, 4.f);
 		shape.setRotation(angle);
 		shape.setPosition(position);
 
@@ -99,14 +105,13 @@ public:
 	sf::Color colour;
 
 private:
-	void turn_towards(const sf::Vector2f& point, float dir) { turn_by(ang(direction, point - position) * dir * TURN_SPEED); }
-	void align_with(const Boid& other) { turn_by(ang(direction, other.direction) * ALIGN_FACTOR); }
-	void turn_by(float theta) { direction = norm(rot(direction, theta)); }
+	void turn_towards(const sf::Vector2f& point, float dir, float dt) { turn_by(ang(direction, point - position) * dir * TURN_SPEED * dt); }
+	void align_with(const Boid& other, float dt) { turn_by(ang(direction, other.direction) * ALIGN_FACTOR * dt); }
+	void turn_by(float theta) { direction = rot(direction, theta); }
 	float len(const sf::Vector2f& v) { return std::sqrtf(v.x*v.x + v.y*v.y); }
 	float ang(const sf::Vector2f& v, const sf::Vector2f& w) { return std::atan2(v.x*w.y - v.y*w.x, v.x*w.x + v.y*w.y); }
 	sf::Vector2f norm(const sf::Vector2f& v) { return v / len(v); }
 	sf::Vector2f rot(const sf::Vector2f& v, float theta) { return { v.x*std::cosf(theta) - v.y*std::sinf(theta), v.x*std::sin(theta) + v.y*std::cosf(theta) }; }
-
 	sf::Color from_hsv(float hue, float sat, float val)
 	{
 		float C = sat * val;
